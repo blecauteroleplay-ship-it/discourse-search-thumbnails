@@ -1,5 +1,6 @@
 .search-result-thumbnails {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
 
   .search-result-thumbnail-wrapper {
