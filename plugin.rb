@@ -2,6 +2,7 @@
 
 # name: discourse-search-thumbnails
 # about: Shows thumbnail previews of images in quick search results when using the with:images filter
+# meta_topic_id: 395082
 # version: 0.1.0
 # authors: Canapin & AI
 # url: https://github.com/discourse/discourse-search-thumbnails
