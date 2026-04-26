@@ -28,14 +28,32 @@ after_initialize do
     :search_post,
     :image_search_data,
     include_condition: -> do
-      return false if object.image_upload_id.blank?
+      topic = object.topic
+      return false if topic.blank?
+
+      # Check if topic has any images (from any post)
+      has_images = topic.posts.where.not(image_upload_id: nil).exists?
+      return false unless has_images
+
       return true unless SiteSetting.search_thumbnails_only_with_images_filter
       options[:result]&.term&.match?(/with:images/i)
     end,
   ) do
-    urls = extract_image_urls.call(object.cooked)
+    # Collect images from all posts in the topic, not just the first one
+    topic = object.topic
+    all_urls = []
+
+    topic.posts.order(:post_number).each do |post|
+      next if post.cooked.blank?
+      urls = extract_image_urls.call(post.cooked)
+      all_urls.concat(urls)
+    end
+
+    # Remove duplicates while preserving order
+    all_urls.uniq!
+
     max_count = SiteSetting.search_thumbnails_max_count
-    limited_urls = max_count.zero? ? urls : urls.first(max_count)
-    { urls: limited_urls, total: urls.size }
+    limited_urls = max_count.zero? ? all_urls : all_urls.first(max_count)
+    { urls: limited_urls, total: all_urls.size }
   end
 end
