@@ -43,7 +43,10 @@ after_initialize do
     topic = object.topic
     all_urls = []
 
-    topic.posts.order(post_number: :desc).each do |post|
+    # Get posts ordered by most recent first (highest post_number first)
+    posts = topic.posts.order("post_number DESC")
+    
+    posts.each do |post|
       next if post.cooked.blank?
       urls = extract_image_urls.call(post.cooked)
       all_urls.concat(urls)
