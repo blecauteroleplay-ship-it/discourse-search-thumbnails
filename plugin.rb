@@ -39,17 +39,17 @@ after_initialize do
       options[:result]&.term&.match?(/with:images/i)
     end,
   ) do
-    # Collect images from all posts in the topic, not just the first one
+    # Collect images from all posts in the topic, ordered by most recent first
     topic = object.topic
     all_urls = []
 
-    topic.posts.order(:post_number).each do |post|
+    topic.posts.order(post_number: :desc).each do |post|
       next if post.cooked.blank?
       urls = extract_image_urls.call(post.cooked)
       all_urls.concat(urls)
     end
 
-    # Remove duplicates while preserving order
+    # Remove duplicates while preserving order (most recent images first)
     all_urls.uniq!
 
     max_count = SiteSetting.search_thumbnails_max_count
