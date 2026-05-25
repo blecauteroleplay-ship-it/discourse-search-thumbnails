@@ -6,6 +6,22 @@ import { apiInitializer } from "discourse/lib/api";
 import { addSearchResultsCallback } from "discourse/lib/search";
 
 const MOBILE_REDUCTION = 2;
+const THUMBNAIL_SIZE = 150;
+
+// Convert image URL to optimized thumbnail URL
+const getOptimizedUrl = (url) => {
+  if (!url) return url;
+  
+  // If it's a Discourse upload, use the optimized version
+  if (url.includes("/uploads/") && !url.includes("/optimized/")) {
+    // Try to use Discourse's built-in thumbnail sizing
+    const sizeParam = `?thumbnail=${THUMBNAIL_SIZE}`;
+    if (!url.includes("?")) {
+      return url + sizeParam;
+    }
+  }
+  return url;
+};
 
 const moveAfterBlurb = modifier((element, [component]) => {
   const searchLink = element.closest(".search-link");
@@ -55,7 +71,8 @@ class SearchThumbnails extends Component {
   }
 
   get visibleImages() {
-    return (this.imageData.urls || []).slice(0, this.maxThumbnails);
+    const urls = (this.imageData.urls || []).slice(0, this.maxThumbnails);
+    return urls.map(url => getOptimizedUrl(url));
   }
 
   get extraCount() {
@@ -71,7 +88,13 @@ class QuickSearchThumbnails extends SearchThumbnails {
         <span class="search-result-thumbnails">
           {{#each this.visibleImages as |imageUrl index|}}
             <span class="search-result-thumbnail-wrapper">
-              <img class="search-result-thumbnail" src={{imageUrl}} />
+              <img 
+                class="search-result-thumbnail" 
+                src={{imageUrl}} 
+                loading="lazy"
+                decoding="async"
+                fetchpriority="low"
+              />
               {{#if (isLastIndex index this.visibleImages.length)}}
                 {{#if this.extraCount}}
                   <span
@@ -125,7 +148,7 @@ const injectPostThumbnails = modifier(
         return;
       }
 
-      const urls = imageData.urls.slice(0, maxCount);
+      const urls = imageData.urls.slice(0, maxCount).map(url => getOptimizedUrl(url));
       const extra = imageData.total > maxCount ? imageData.total - maxCount : 0;
 
       const wrapper = document.createElement("span");
@@ -138,6 +161,9 @@ const injectPostThumbnails = modifier(
         const img = document.createElement("img");
         img.className = "search-result-thumbnail";
         img.src = url;
+        img.loading = "lazy";
+        img.decoding = "async";
+        img.fetchPriority = "low";
         thumbWrapper.appendChild(img);
 
         if (i === urls.length - 1 && extra > 0) {
@@ -178,7 +204,13 @@ class FullPageSearchThumbnails extends SearchThumbnails {
       <div class="search-result-thumbnails">
         {{#each this.visibleImages as |imageUrl index|}}
           <span class="search-result-thumbnail-wrapper">
-            <img class="search-result-thumbnail" src={{imageUrl}} />
+            <img 
+              class="search-result-thumbnail" 
+              src={{imageUrl}} 
+              loading="lazy"
+              decoding="async"
+              fetchpriority="low"
+            />
             {{#if (isLastIndex index this.visibleImages.length)}}
               {{#if this.extraCount}}
                 <span
