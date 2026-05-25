@@ -7,29 +7,6 @@ import { addSearchResultsCallback } from "discourse/lib/search";
 
 const MOBILE_REDUCTION = 2;
 
-// Image cache to preload and store images for faster subsequent loads
-const imageCache = new Map();
-
-function preloadImage(url) {
-  if (imageCache.has(url)) {
-    return imageCache.get(url);
-  }
-
-  const promise = new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(url);
-    img.onerror = () => reject(url);
-    img.src = url;
-  });
-
-  imageCache.set(url, promise);
-  return promise;
-}
-
-function preloadImages(urls) {
-  urls.forEach((url) => preloadImage(url));
-}
-
 const moveAfterBlurb = modifier((element, [component]) => {
   const searchLink = element.closest(".search-link");
   if (searchLink) {
@@ -88,26 +65,13 @@ class SearchThumbnails extends Component {
 }
 
 class QuickSearchThumbnails extends SearchThumbnails {
-  constructor() {
-    super(...arguments);
-    // Preload images when component is created
-    if (this.visibleImages.length) {
-      preloadImages(this.visibleImages);
-    }
-  }
-
   <template>
     <span class="search-result-thumbnails-wrapper" {{moveAfterBlurb this}}>
       {{#if this.visibleImages.length}}
         <span class="search-result-thumbnails">
           {{#each this.visibleImages as |imageUrl index|}}
             <span class="search-result-thumbnail-wrapper">
-              <img
-                class="search-result-thumbnail"
-                src={{imageUrl}}
-                loading="lazy"
-                decoding="async"
-              />
+              <img class="search-result-thumbnail" src={{imageUrl}} />
               {{#if (isLastIndex index this.visibleImages.length)}}
                 {{#if this.extraCount}}
                   <span
@@ -168,17 +132,12 @@ const injectPostThumbnails = modifier(
       wrapper.className = "search-result-thumbnails";
 
       urls.forEach((url, i) => {
-        // Preload image for caching
-        preloadImage(url);
-
         const thumbWrapper = document.createElement("span");
         thumbWrapper.className = "search-result-thumbnail-wrapper";
 
         const img = document.createElement("img");
         img.className = "search-result-thumbnail";
         img.src = url;
-        img.loading = "lazy";
-        img.decoding = "async";
         thumbWrapper.appendChild(img);
 
         if (i === urls.length - 1 && extra > 0) {
@@ -214,25 +173,12 @@ class PostTypeSearchThumbnails extends Component {
 }
 
 class FullPageSearchThumbnails extends SearchThumbnails {
-  constructor() {
-    super(...arguments);
-    // Preload images when component is created
-    if (this.visibleImages.length) {
-      preloadImages(this.visibleImages);
-    }
-  }
-
   <template>
     {{#if this.visibleImages.length}}
       <div class="search-result-thumbnails">
         {{#each this.visibleImages as |imageUrl index|}}
           <span class="search-result-thumbnail-wrapper">
-            <img
-              class="search-result-thumbnail"
-              src={{imageUrl}}
-              loading="lazy"
-              decoding="async"
-            />
+            <img class="search-result-thumbnail" src={{imageUrl}} />
             {{#if (isLastIndex index this.visibleImages.length)}}
               {{#if this.extraCount}}
                 <span
@@ -264,11 +210,6 @@ export default apiInitializer((api) => {
         }
         imageDataByTopicId[post.topic_id][post.post_number] =
           post.image_search_data;
-
-        // Preload images as soon as search results arrive
-        if (post.image_search_data.urls) {
-          preloadImages(post.image_search_data.urls);
-        }
       }
     });
 
