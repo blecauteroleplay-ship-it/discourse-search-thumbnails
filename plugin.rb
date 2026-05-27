@@ -41,7 +41,8 @@ after_initialize do
   ) do
     # Collect images from all posts in the topic, ordered by most recent first
     topic = object.topic
-    all_urls = []
+    all_images = []
+    seen_urls = Set.new
 
     # Get posts ordered by most recent first (highest post_number first)
     posts = topic.posts.order("post_number DESC")
@@ -49,14 +50,16 @@ after_initialize do
     posts.each do |post|
       next if post.cooked.blank?
       urls = extract_image_urls.call(post.cooked)
-      all_urls.concat(urls)
+      urls.each do |url|
+        unless seen_urls.include?(url)
+          seen_urls.add(url)
+          all_images << { url: url, post_number: post.post_number }
+        end
+      end
     end
 
-    # Remove duplicates while preserving order (most recent images first)
-    all_urls.uniq!
-
     max_count = SiteSetting.search_thumbnails_max_count
-    limited_urls = max_count.zero? ? all_urls : all_urls.first(max_count)
-    { urls: limited_urls, total: all_urls.size }
+    limited_images = max_count.zero? ? all_images : all_images.first(max_count)
+    { images: limited_images, total: all_images.size }
   end
 end
