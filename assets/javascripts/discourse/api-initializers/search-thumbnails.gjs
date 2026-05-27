@@ -13,6 +13,7 @@ const moveAfterBlurb = modifier((element, [component]) => {
     searchLink.appendChild(element);
     const href = searchLink.getAttribute("href");
     if (href) {
+      component.postUrl = href;
       const match = href.match(/\/(\d+)(?:\/(\d+))?(?:\?|$)/);
       if (match) {
         component.postNumber = match[2] ? parseInt(match[2], 10) : 1;
@@ -28,6 +29,7 @@ class SearchThumbnails extends Component {
   @service siteSettings;
 
   @tracked postNumber = null;
+  @tracked postUrl = null;
 
   get maxThumbnails() {
     const setting = this.siteSettings.search_thumbnails_max_count;
@@ -71,14 +73,20 @@ class QuickSearchThumbnails extends SearchThumbnails {
         <span class="search-result-thumbnails">
           {{#each this.visibleImages as |imageUrl index|}}
             <span class="search-result-thumbnail-wrapper">
-              <img class="search-result-thumbnail" src={{imageUrl}} />
-              {{#if (isLastIndex index this.visibleImages.length)}}
-                {{#if this.extraCount}}
-                  <span
-                    class="search-result-thumbnail-more"
-                  >+{{this.extraCount}}</span>
+              <a
+                href={{this.postUrl}}
+                class="search-result-thumbnail-link"
+                title="Ver post"
+              >
+                <img class="search-result-thumbnail" src={{imageUrl}} />
+                {{#if (isLastIndex index this.visibleImages.length)}}
+                  {{#if this.extraCount}}
+                    <span
+                      class="search-result-thumbnail-more"
+                    >+{{this.extraCount}}</span>
+                  {{/if}}
                 {{/if}}
-              {{/if}}
+              </a>
             </span>
           {{/each}}
         </span>
@@ -125,6 +133,7 @@ const injectPostThumbnails = modifier(
         return;
       }
 
+      const postUrl = searchLink.getAttribute("href");
       const urls = imageData.urls.slice(0, maxCount);
       const extra = imageData.total > maxCount ? imageData.total - maxCount : 0;
 
@@ -135,18 +144,24 @@ const injectPostThumbnails = modifier(
         const thumbWrapper = document.createElement("span");
         thumbWrapper.className = "search-result-thumbnail-wrapper";
 
+        const link = document.createElement("a");
+        link.href = postUrl;
+        link.className = "search-result-thumbnail-link";
+        link.title = "Ver post";
+
         const img = document.createElement("img");
         img.className = "search-result-thumbnail";
         img.src = url;
-        thumbWrapper.appendChild(img);
+        link.appendChild(img);
 
         if (i === urls.length - 1 && extra > 0) {
           const more = document.createElement("span");
           more.className = "search-result-thumbnail-more";
           more.textContent = `+${extra}`;
-          thumbWrapper.appendChild(more);
+          link.appendChild(more);
         }
 
+        thumbWrapper.appendChild(link);
         wrapper.appendChild(thumbWrapper);
       });
 
@@ -173,19 +188,33 @@ class PostTypeSearchThumbnails extends Component {
 }
 
 class FullPageSearchThumbnails extends SearchThumbnails {
+  get resultUrl() {
+    const post = this.args.outletArgs.post;
+    if (post?.url) {
+      return post.url;
+    }
+    return null;
+  }
+
   <template>
     {{#if this.visibleImages.length}}
       <div class="search-result-thumbnails">
         {{#each this.visibleImages as |imageUrl index|}}
           <span class="search-result-thumbnail-wrapper">
-            <img class="search-result-thumbnail" src={{imageUrl}} />
-            {{#if (isLastIndex index this.visibleImages.length)}}
-              {{#if this.extraCount}}
-                <span
-                  class="search-result-thumbnail-more"
-                >+{{this.extraCount}}</span>
+            <a
+              href={{this.resultUrl}}
+              class="search-result-thumbnail-link"
+              title="Ver post"
+            >
+              <img class="search-result-thumbnail" src={{imageUrl}} />
+              {{#if (isLastIndex index this.visibleImages.length)}}
+                {{#if this.extraCount}}
+                  <span
+                    class="search-result-thumbnail-more"
+                  >+{{this.extraCount}}</span>
+                {{/if}}
               {{/if}}
-            {{/if}}
+            </a>
           </span>
         {{/each}}
       </div>

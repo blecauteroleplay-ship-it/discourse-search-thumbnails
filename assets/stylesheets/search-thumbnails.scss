@@ -7,6 +7,17 @@
     position: relative;
   }
 
+  .search-result-thumbnail-link {
+    display: block;
+    cursor: pointer;
+    text-decoration: none;
+
+    &:hover .search-result-thumbnail {
+      border-color: var(--tertiary);
+      box-shadow: 0 0 0 1px var(--tertiary);
+    }
+  }
+
   .search-result-thumbnail {
     width: 60px;
     height: 60px;
@@ -19,6 +30,7 @@
       var(--primary-low) 18%,
       var(--primary-very-low) 33%
     );
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
     @media (prefers-reduced-motion: no-preference) {
       animation: search-thumbnail-shimmer 4s linear infinite;
