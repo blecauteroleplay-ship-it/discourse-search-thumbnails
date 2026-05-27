@@ -62,6 +62,10 @@ class SearchThumbnails extends Component {
     const total = this.imageData.total || 0;
     return total > this.maxThumbnails ? total - this.maxThumbnails : 0;
   }
+
+  get postUrl() {
+    return this.imageData.postUrl || null;
+  }
 }
 
 class QuickSearchThumbnails extends SearchThumbnails {
@@ -71,12 +75,29 @@ class QuickSearchThumbnails extends SearchThumbnails {
         <span class="search-result-thumbnails">
           {{#each this.visibleImages as |imageUrl index|}}
             <span class="search-result-thumbnail-wrapper">
-              <img class="search-result-thumbnail" src={{imageUrl}} />
-              {{#if (isLastIndex index this.visibleImages.length)}}
-                {{#if this.extraCount}}
-                  <span
-                    class="search-result-thumbnail-more"
-                  >+{{this.extraCount}}</span>
+              {{#if this.postUrl}}
+                <a
+                  href={{this.postUrl}}
+                  class="search-result-thumbnail-link"
+                  title="View post"
+                >
+                  <img class="search-result-thumbnail" src={{imageUrl}} />
+                  {{#if (isLastIndex index this.visibleImages.length)}}
+                    {{#if this.extraCount}}
+                      <span
+                        class="search-result-thumbnail-more"
+                      >+{{this.extraCount}}</span>
+                    {{/if}}
+                  {{/if}}
+                </a>
+              {{else}}
+                <img class="search-result-thumbnail" src={{imageUrl}} />
+                {{#if (isLastIndex index this.visibleImages.length)}}
+                  {{#if this.extraCount}}
+                    <span
+                      class="search-result-thumbnail-more"
+                    >+{{this.extraCount}}</span>
+                  {{/if}}
                 {{/if}}
               {{/if}}
             </span>
@@ -127,6 +148,7 @@ const injectPostThumbnails = modifier(
 
       const urls = imageData.urls.slice(0, maxCount);
       const extra = imageData.total > maxCount ? imageData.total - maxCount : 0;
+      const postUrl = imageData.postUrl || result.url || null;
 
       const wrapper = document.createElement("span");
       wrapper.className = "search-result-thumbnails";
@@ -138,13 +160,31 @@ const injectPostThumbnails = modifier(
         const img = document.createElement("img");
         img.className = "search-result-thumbnail";
         img.src = url;
-        thumbWrapper.appendChild(img);
 
-        if (i === urls.length - 1 && extra > 0) {
-          const more = document.createElement("span");
-          more.className = "search-result-thumbnail-more";
-          more.textContent = `+${extra}`;
-          thumbWrapper.appendChild(more);
+        if (postUrl) {
+          const link = document.createElement("a");
+          link.href = postUrl;
+          link.className = "search-result-thumbnail-link";
+          link.title = "View post";
+          link.appendChild(img);
+
+          if (i === urls.length - 1 && extra > 0) {
+            const more = document.createElement("span");
+            more.className = "search-result-thumbnail-more";
+            more.textContent = `+${extra}`;
+            link.appendChild(more);
+          }
+
+          thumbWrapper.appendChild(link);
+        } else {
+          thumbWrapper.appendChild(img);
+
+          if (i === urls.length - 1 && extra > 0) {
+            const more = document.createElement("span");
+            more.className = "search-result-thumbnail-more";
+            more.textContent = `+${extra}`;
+            thumbWrapper.appendChild(more);
+          }
         }
 
         wrapper.appendChild(thumbWrapper);
@@ -178,12 +218,29 @@ class FullPageSearchThumbnails extends SearchThumbnails {
       <div class="search-result-thumbnails">
         {{#each this.visibleImages as |imageUrl index|}}
           <span class="search-result-thumbnail-wrapper">
-            <img class="search-result-thumbnail" src={{imageUrl}} />
-            {{#if (isLastIndex index this.visibleImages.length)}}
-              {{#if this.extraCount}}
-                <span
-                  class="search-result-thumbnail-more"
-                >+{{this.extraCount}}</span>
+            {{#if this.postUrl}}
+              <a
+                href={{this.postUrl}}
+                class="search-result-thumbnail-link"
+                title="View post"
+              >
+                <img class="search-result-thumbnail" src={{imageUrl}} />
+                {{#if (isLastIndex index this.visibleImages.length)}}
+                  {{#if this.extraCount}}
+                    <span
+                      class="search-result-thumbnail-more"
+                    >+{{this.extraCount}}</span>
+                  {{/if}}
+                {{/if}}
+              </a>
+            {{else}}
+              <img class="search-result-thumbnail" src={{imageUrl}} />
+              {{#if (isLastIndex index this.visibleImages.length)}}
+                {{#if this.extraCount}}
+                  <span
+                    class="search-result-thumbnail-more"
+                  >+{{this.extraCount}}</span>
+                {{/if}}
               {{/if}}
             {{/if}}
           </span>
@@ -208,8 +265,14 @@ export default apiInitializer((api) => {
         if (!imageDataByTopicId[post.topic_id]) {
           imageDataByTopicId[post.topic_id] = {};
         }
-        imageDataByTopicId[post.topic_id][post.post_number] =
-          post.image_search_data;
+        // Add post URL to image data for linking
+        const postUrl = post.url || `/t/${post.topic_id}/${post.post_number}`;
+        imageDataByTopicId[post.topic_id][post.post_number] = {
+          ...post.image_search_data,
+          postUrl,
+        };
+        // Also update the post's image_search_data with the URL
+        post.image_search_data.postUrl = postUrl;
       }
     });
 
