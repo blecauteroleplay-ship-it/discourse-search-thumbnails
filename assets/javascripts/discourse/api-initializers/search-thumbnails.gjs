@@ -56,8 +56,28 @@ class SearchThumbnails extends Component {
     return {};
   }
 
+  get topicUrl() {
+    const topic = this.args.outletArgs.topic;
+    if (topic?.url) {
+      // Remove trailing post number if present (e.g., /t/slug/123/1 -> /t/slug/123)
+      return topic.url.replace(/\/\d+$/, "");
+    }
+    if (this.postUrl) {
+      // Extract base topic URL from post URL
+      return this.postUrl.replace(/\/\d+(\?.*)?$/, "");
+    }
+    return null;
+  }
+
+  getImageUrl(image) {
+    if (this.topicUrl && image.post_number) {
+      return `${this.topicUrl}/${image.post_number}`;
+    }
+    return this.postUrl || this.topicUrl;
+  }
+
   get visibleImages() {
-    return (this.imageData.urls || []).slice(0, this.maxThumbnails);
+    return (this.imageData.images || []).slice(0, this.maxThumbnails);
   }
 
   get extraCount() {
@@ -71,14 +91,14 @@ class QuickSearchThumbnails extends SearchThumbnails {
     <span class="search-result-thumbnails-wrapper" {{moveAfterBlurb this}}>
       {{#if this.visibleImages.length}}
         <span class="search-result-thumbnails">
-          {{#each this.visibleImages as |imageUrl index|}}
+          {{#each this.visibleImages as |image index|}}
             <span class="search-result-thumbnail-wrapper">
               <a
-                href={{this.postUrl}}
+                href={{this.getImageUrl image}}
                 class="search-result-thumbnail-link"
                 title="Ver post"
               >
-                <img class="search-result-thumbnail" src={{imageUrl}} />
+                <img class="search-result-thumbnail" src={{image.url}} />
                 {{#if (isLastIndex index this.visibleImages.length)}}
                   {{#if this.extraCount}}
                     <span
@@ -121,7 +141,7 @@ const injectPostThumbnails = modifier(
       }
 
       const imageData = result.image_search_data;
-      if (!imageData?.urls?.length) {
+      if (!imageData?.images?.length) {
         return;
       }
 
@@ -133,28 +153,28 @@ const injectPostThumbnails = modifier(
         return;
       }
 
-      const postUrl = searchLink.getAttribute("href");
-      const urls = imageData.urls.slice(0, maxCount);
+      const baseUrl = searchLink.getAttribute("href")?.replace(/\/\d+(\?.*)?$/, "");
+      const images = imageData.images.slice(0, maxCount);
       const extra = imageData.total > maxCount ? imageData.total - maxCount : 0;
 
       const wrapper = document.createElement("span");
       wrapper.className = "search-result-thumbnails";
 
-      urls.forEach((url, i) => {
+      images.forEach((image, i) => {
         const thumbWrapper = document.createElement("span");
         thumbWrapper.className = "search-result-thumbnail-wrapper";
 
         const link = document.createElement("a");
-        link.href = postUrl;
+        link.href = image.post_number ? `${baseUrl}/${image.post_number}` : baseUrl;
         link.className = "search-result-thumbnail-link";
         link.title = "Ver post";
 
         const img = document.createElement("img");
         img.className = "search-result-thumbnail";
-        img.src = url;
+        img.src = image.url;
         link.appendChild(img);
 
-        if (i === urls.length - 1 && extra > 0) {
+        if (i === images.length - 1 && extra > 0) {
           const more = document.createElement("span");
           more.className = "search-result-thumbnail-more";
           more.textContent = `+${extra}`;
@@ -188,25 +208,33 @@ class PostTypeSearchThumbnails extends Component {
 }
 
 class FullPageSearchThumbnails extends SearchThumbnails {
-  get resultUrl() {
+  get baseTopicUrl() {
     const post = this.args.outletArgs.post;
     if (post?.url) {
-      return post.url;
+      // Remove trailing post number if present
+      return post.url.replace(/\/\d+(\?.*)?$/, "");
     }
     return null;
+  }
+
+  getPostUrl(image) {
+    if (this.baseTopicUrl && image.post_number) {
+      return `${this.baseTopicUrl}/${image.post_number}`;
+    }
+    return this.args.outletArgs.post?.url;
   }
 
   <template>
     {{#if this.visibleImages.length}}
       <div class="search-result-thumbnails">
-        {{#each this.visibleImages as |imageUrl index|}}
+        {{#each this.visibleImages as |image index|}}
           <span class="search-result-thumbnail-wrapper">
             <a
-              href={{this.resultUrl}}
+              href={{this.getPostUrl image}}
               class="search-result-thumbnail-link"
               title="Ver post"
             >
-              <img class="search-result-thumbnail" src={{imageUrl}} />
+              <img class="search-result-thumbnail" src={{image.url}} />
               {{#if (isLastIndex index this.visibleImages.length)}}
                 {{#if this.extraCount}}
                   <span
