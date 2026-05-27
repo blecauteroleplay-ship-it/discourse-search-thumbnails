@@ -7,30 +7,6 @@
     position: relative;
   }
 
-  .search-result-thumbnail-link {
-    display: block;
-    position: relative;
-    text-decoration: none;
-    border-radius: var(--d-border-radius);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-
-    &:hover,
-    &:focus {
-      transform: scale(1.05);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      outline: none;
-
-      .search-result-thumbnail {
-        border-color: var(--tertiary);
-      }
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--tertiary);
-      outline-offset: 2px;
-    }
-  }
-
   .search-result-thumbnail {
     width: 60px;
     height: 60px;
@@ -43,7 +19,6 @@
       var(--primary-low) 18%,
       var(--primary-very-low) 33%
     );
-    transition: border-color 0.15s ease;
 
     @media (prefers-reduced-motion: no-preference) {
       animation: search-thumbnail-shimmer 4s linear infinite;
