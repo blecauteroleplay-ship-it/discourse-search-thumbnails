@@ -55,16 +55,18 @@ class SearchThumbnails extends Component {
   }
 
   get visibleImages() {
-    return (this.imageData.urls || []).slice(0, this.maxThumbnails);
+    // Use new images array with post URLs if available, otherwise fall back to urls array
+    const images = this.imageData.images;
+    if (images?.length) {
+      return images.slice(0, this.maxThumbnails);
+    }
+    // Fallback for backwards compatibility
+    return (this.imageData.urls || []).slice(0, this.maxThumbnails).map(url => ({ url, post_url: null }));
   }
 
   get extraCount() {
     const total = this.imageData.total || 0;
     return total > this.maxThumbnails ? total - this.maxThumbnails : 0;
-  }
-
-  get postUrl() {
-    return this.imageData.postUrl || null;
   }
 }
 
@@ -73,15 +75,15 @@ class QuickSearchThumbnails extends SearchThumbnails {
     <span class="search-result-thumbnails-wrapper" {{moveAfterBlurb this}}>
       {{#if this.visibleImages.length}}
         <span class="search-result-thumbnails">
-          {{#each this.visibleImages as |imageUrl index|}}
+          {{#each this.visibleImages as |image index|}}
             <span class="search-result-thumbnail-wrapper">
-              {{#if this.postUrl}}
+              {{#if image.post_url}}
                 <a
-                  href={{this.postUrl}}
+                  href={{image.post_url}}
                   class="search-result-thumbnail-link"
                   title="View post"
                 >
-                  <img class="search-result-thumbnail" src={{imageUrl}} />
+                  <img class="search-result-thumbnail" src={{image.url}} />
                   {{#if (isLastIndex index this.visibleImages.length)}}
                     {{#if this.extraCount}}
                       <span
@@ -91,7 +93,7 @@ class QuickSearchThumbnails extends SearchThumbnails {
                   {{/if}}
                 </a>
               {{else}}
-                <img class="search-result-thumbnail" src={{imageUrl}} />
+                <img class="search-result-thumbnail" src={{image.url}} />
                 {{#if (isLastIndex index this.visibleImages.length)}}
                   {{#if this.extraCount}}
                     <span
@@ -134,7 +136,13 @@ const injectPostThumbnails = modifier(
       }
 
       const imageData = result.image_search_data;
-      if (!imageData?.urls?.length) {
+      if (!imageData) {
+        return;
+      }
+
+      // Use new images array if available, otherwise fall back to urls
+      const images = imageData.images || (imageData.urls || []).map(url => ({ url, post_url: null }));
+      if (!images.length) {
         return;
       }
 
@@ -146,29 +154,28 @@ const injectPostThumbnails = modifier(
         return;
       }
 
-      const urls = imageData.urls.slice(0, maxCount);
+      const visibleImages = images.slice(0, maxCount);
       const extra = imageData.total > maxCount ? imageData.total - maxCount : 0;
-      const postUrl = imageData.postUrl || result.url || null;
 
       const wrapper = document.createElement("span");
       wrapper.className = "search-result-thumbnails";
 
-      urls.forEach((url, i) => {
+      visibleImages.forEach((image, i) => {
         const thumbWrapper = document.createElement("span");
         thumbWrapper.className = "search-result-thumbnail-wrapper";
 
         const img = document.createElement("img");
         img.className = "search-result-thumbnail";
-        img.src = url;
+        img.src = image.url;
 
-        if (postUrl) {
+        if (image.post_url) {
           const link = document.createElement("a");
-          link.href = postUrl;
+          link.href = image.post_url;
           link.className = "search-result-thumbnail-link";
           link.title = "View post";
           link.appendChild(img);
 
-          if (i === urls.length - 1 && extra > 0) {
+          if (i === visibleImages.length - 1 && extra > 0) {
             const more = document.createElement("span");
             more.className = "search-result-thumbnail-more";
             more.textContent = `+${extra}`;
@@ -179,7 +186,7 @@ const injectPostThumbnails = modifier(
         } else {
           thumbWrapper.appendChild(img);
 
-          if (i === urls.length - 1 && extra > 0) {
+          if (i === visibleImages.length - 1 && extra > 0) {
             const more = document.createElement("span");
             more.className = "search-result-thumbnail-more";
             more.textContent = `+${extra}`;
@@ -216,15 +223,15 @@ class FullPageSearchThumbnails extends SearchThumbnails {
   <template>
     {{#if this.visibleImages.length}}
       <div class="search-result-thumbnails">
-        {{#each this.visibleImages as |imageUrl index|}}
+        {{#each this.visibleImages as |image index|}}
           <span class="search-result-thumbnail-wrapper">
-            {{#if this.postUrl}}
+            {{#if image.post_url}}
               <a
-                href={{this.postUrl}}
+                href={{image.post_url}}
                 class="search-result-thumbnail-link"
                 title="View post"
               >
-                <img class="search-result-thumbnail" src={{imageUrl}} />
+                <img class="search-result-thumbnail" src={{image.url}} />
                 {{#if (isLastIndex index this.visibleImages.length)}}
                   {{#if this.extraCount}}
                     <span
@@ -234,7 +241,7 @@ class FullPageSearchThumbnails extends SearchThumbnails {
                 {{/if}}
               </a>
             {{else}}
-              <img class="search-result-thumbnail" src={{imageUrl}} />
+              <img class="search-result-thumbnail" src={{image.url}} />
               {{#if (isLastIndex index this.visibleImages.length)}}
                 {{#if this.extraCount}}
                   <span
@@ -265,14 +272,7 @@ export default apiInitializer((api) => {
         if (!imageDataByTopicId[post.topic_id]) {
           imageDataByTopicId[post.topic_id] = {};
         }
-        // Add post URL to image data for linking
-        const postUrl = post.url || `/t/${post.topic_id}/${post.post_number}`;
-        imageDataByTopicId[post.topic_id][post.post_number] = {
-          ...post.image_search_data,
-          postUrl,
-        };
-        // Also update the post's image_search_data with the URL
-        post.image_search_data.postUrl = postUrl;
+        imageDataByTopicId[post.topic_id][post.post_number] = post.image_search_data;
       }
     });
 
