@@ -15,6 +15,10 @@ register_asset "stylesheets/search-thumbnails.scss"
 after_initialize do
   rejected_img_classes = %w[emoji site-icon thumbnail avatar]
 
+  # Thumbnails are displayed at 60px, so a 120px optimized image covers
+  # retina/HiDPI screens while staying tiny and fast to download.
+  thumbnail_size = 120
+
   extract_image_urls = ->(cooked) do
     cooked
       .scan(/<img[^>]*>/)
@@ -22,6 +26,22 @@ after_initialize do
         tag[/class="([^"]*)"/, 1]&.split&.any? { |c| rejected_img_classes.include?(c) }
       end
       .filter_map { |tag| tag[/src="([^"]+)"/, 1] }
+  end
+
+  # Convert a full-size image URL into a small, pre-generated optimized
+  # thumbnail so search results load near-instantly. Falls back to the
+  # original URL when no matching upload/optimized image can be resolved.
+  optimize_url = ->(url) do
+    upload = Upload.get_from_url(url)
+    next url unless upload
+    next url unless FileHelper.is_supported_image?(upload.original_filename.to_s)
+
+    optimized = upload.get_optimized_image(thumbnail_size, thumbnail_size, {})
+    next url unless optimized
+
+    UrlHelper.cook_url(optimized.url, secure: upload.secure?)
+  rescue StandardError
+    url
   end
 
   add_to_serializer(
@@ -57,6 +77,8 @@ after_initialize do
 
     max_count = SiteSetting.search_thumbnails_max_count
     limited_urls = max_count.zero? ? all_urls : all_urls.first(max_count)
-    { urls: limited_urls, total: all_urls.size }
+    # Only optimize the URLs we actually send to the client.
+    optimized_urls = limited_urls.map { |url| optimize_url.call(url) }
+    { urls: optimized_urls, total: all_urls.size }
   end
 end

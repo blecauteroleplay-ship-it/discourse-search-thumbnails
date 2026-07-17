@@ -71,7 +71,15 @@ class QuickSearchThumbnails extends SearchThumbnails {
         <span class="search-result-thumbnails">
           {{#each this.visibleImages as |imageUrl index|}}
             <span class="search-result-thumbnail-wrapper">
-              <img class="search-result-thumbnail" src={{imageUrl}} />
+              <img
+                class="search-result-thumbnail"
+                src={{imageUrl}}
+                width="60"
+                height="60"
+                loading="eager"
+                decoding="async"
+                fetchpriority="high"
+              />
               {{#if (isLastIndex index this.visibleImages.length)}}
                 {{#if this.extraCount}}
                   <span
@@ -137,6 +145,11 @@ const injectPostThumbnails = modifier(
 
         const img = document.createElement("img");
         img.className = "search-result-thumbnail";
+        img.width = 60;
+        img.height = 60;
+        img.loading = "eager";
+        img.decoding = "async";
+        img.fetchPriority = "high";
         img.src = url;
         thumbWrapper.appendChild(img);
 
@@ -178,7 +191,15 @@ class FullPageSearchThumbnails extends SearchThumbnails {
       <div class="search-result-thumbnails">
         {{#each this.visibleImages as |imageUrl index|}}
           <span class="search-result-thumbnail-wrapper">
-            <img class="search-result-thumbnail" src={{imageUrl}} />
+            <img
+              class="search-result-thumbnail"
+              src={{imageUrl}}
+              width="60"
+              height="60"
+              loading="eager"
+              decoding="async"
+              fetchpriority="high"
+            />
             {{#if (isLastIndex index this.visibleImages.length)}}
               {{#if this.extraCount}}
                 <span
